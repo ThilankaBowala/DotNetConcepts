@@ -1,28 +1,23 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using EmployeesManagement.Context;
 using EmployeesManagement.Models;
+using EmployeesManagement.Services.Employee;
 
 namespace EmployeesManagement.Controllers
 {
     public class EmployeesController : Controller
     {
-        private readonly ApplicationDbContext _context;
+        private readonly IEmployeeService _iEmployeeService;
 
-        public EmployeesController(ApplicationDbContext context)
+        public EmployeesController(IEmployeeService iEmployeeService)
         {
-            _context = context;
+            _iEmployeeService = iEmployeeService;
         }
 
         // GET: Employees
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Employees.ToListAsync());
+            return View(await _iEmployeeService.GetEmployeesAsync());
         }
 
         // GET: Employees/Details/5
@@ -33,8 +28,8 @@ namespace EmployeesManagement.Controllers
                 return NotFound();
             }
 
-            var employee = await _context.Employees
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var employee = await _iEmployeeService.GetById((int)id);
+
             if (employee == null)
             {
                 return NotFound();
@@ -58,8 +53,7 @@ namespace EmployeesManagement.Controllers
         {
             if (ModelState.IsValid)
             {
-                _context.Add(employee);
-                await _context.SaveChangesAsync();
+                await _iEmployeeService.CreateAsync(employee);
                 return RedirectToAction(nameof(Index));
             }
             return View(employee);
@@ -73,7 +67,7 @@ namespace EmployeesManagement.Controllers
                 return NotFound();
             }
 
-            var employee = await _context.Employees.FindAsync(id);
+            var employee = await _iEmployeeService.GetById((int)id);
             if (employee == null)
             {
                 return NotFound();
@@ -95,21 +89,11 @@ namespace EmployeesManagement.Controllers
 
             if (ModelState.IsValid)
             {
-                try
+                var results = await _iEmployeeService.UpdateEmployee(id, employee);
+
+                if (!results)
                 {
-                    _context.Update(employee);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!EmployeeExists(employee.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
+                    return NotFound();
                 }
                 return RedirectToAction(nameof(Index));
             }
@@ -124,8 +108,7 @@ namespace EmployeesManagement.Controllers
                 return NotFound();
             }
 
-            var employee = await _context.Employees
-                .FirstOrDefaultAsync(m => m.Id == id);
+            var employee = await _iEmployeeService.GetById((int)id);
             if (employee == null)
             {
                 return NotFound();
@@ -139,19 +122,13 @@ namespace EmployeesManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var employee = await _context.Employees.FindAsync(id);
-            if (employee != null)
+            var results = await _iEmployeeService.DeleteEmployee(id);
+            if (!results)
             {
-                _context.Employees.Remove(employee);
+                return NotFound();
             }
 
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
-        }
-
-        private bool EmployeeExists(int id)
-        {
-            return _context.Employees.Any(e => e.Id == id);
         }
     }
 }
