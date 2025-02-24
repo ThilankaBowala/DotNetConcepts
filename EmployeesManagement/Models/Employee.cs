@@ -1,6 +1,6 @@
 ﻿namespace EmployeesManagement.Models
 {
-    public class Employees
+    public class Employee
     {
         public int Id { get; set; }
 
